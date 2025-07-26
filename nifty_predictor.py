@@ -12,108 +12,118 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-print("🤖 Live AI 5-Min Candle Predictor for NIFTY")
+print("🤖 Live AI 5-Min Candle Predictor for NIFTY, BANKNIFTY & SENSEX")
 
-# ⏳ Download NIFTY 5-min data
-print("⏳ Fetching NIFTY 5-min data...")
-nifty = yf.download("^NSEI", interval="5m", period="5d", progress=False)
+# 🧠 Function to run prediction for an index
+def predict_index(ticker, name):
+    print(f"\n📊 Running for: {name} ({ticker})")
+    data = yf.download(ticker, interval="5m", period="5d", progress=False)
 
-if nifty.empty:
-    print("❌ Data fetch failed. Check market status or API limits.")
-    exit()
+    if data.empty:
+        print(f"❌ Data fetch failed for {name}")
+        return None
 
-# 🧠 Feature Engineering
-nifty['Return'] = nifty['Close'].pct_change()
-nifty['Direction'] = np.where(nifty['Return'].shift(-1) > 0, 1, 0)
-nifty['MA5'] = nifty['Close'].rolling(5).mean()
-nifty['MA10'] = nifty['Close'].rolling(10).mean()
-nifty['Volatility'] = nifty['Close'].rolling(5).std()
-nifty.dropna(inplace=True)
+    data['Return'] = data['Close'].pct_change()
+    data['Direction'] = np.where(data['Return'].shift(-1) > 0, 1, 0)
+    data['MA5'] = data['Close'].rolling(5).mean()
+    data['MA10'] = data['Close'].rolling(10).mean()
+    data['Volatility'] = data['Close'].rolling(5).std()
+    data.dropna(inplace=True)
 
-# 📊 Features
-features = ['Close', 'MA5', 'MA10', 'Volatility']
-X = nifty[features]
-y = nifty['Direction']
+    features = ['Close', 'MA5', 'MA10', 'Volatility']
+    X = data[features]
+    y = data['Direction']
 
-# 🔍 Preprocess
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, shuffle=False)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, shuffle=False)
 
-# 🧠 Train model
-model = RandomForestClassifier(n_estimators=200, max_depth=5)
-model.fit(X_train, y_train)
+    model = RandomForestClassifier(n_estimators=200, max_depth=5)
+    model.fit(X_train, y_train)
 
-# 📈 Evaluate (last 5 predictions)
-last_5_pred = model.predict(X_scaled[-5:])
-last_5_true = y.values[-5:]
-accuracy = np.mean(last_5_pred == last_5_true) * 100
-print(f"✅ Model Backtest Accuracy (last 5 candles): {accuracy:.2f}%")
+    last_5_pred = model.predict(X_scaled[-5:])
+    last_5_true = y.values[-5:]
+    accuracy = np.mean(last_5_pred == last_5_true) * 100
+    print(f"✅ {name} Accuracy (last 5 candles): {accuracy:.2f}%")
 
-# 🔮 Prediction
-latest = nifty.iloc[[-1]]
-latest_time_ist = latest.index[0].astimezone(ZoneInfo("Asia/Kolkata"))
-latest_close = float(latest['Close'].iloc[0])
-latest_features = scaler.transform(latest[features])
-pred = model.predict(latest_features)[0]
+    latest = data.iloc[[-1]]
+    latest_time_ist = latest.index[0].astimezone(ZoneInfo("Asia/Kolkata"))
+    latest_close = float(latest['Close'].iloc[0])
+    latest_features = scaler.transform(latest[features])
+    pred = model.predict(latest_features)[0]
 
-# 🎯 Target and SL logic
-target_pts = 25
-sl_pts = 15
+    target_pts = 25
+    sl_pts = 15
 
-if pred == 1:
-    direction = "🔼 UP"
-    target = latest_close + target_pts
-    stoploss = latest_close - sl_pts
-    option = f"{int(round(latest_close / 50.0) * 50)}CE"
-else:
-    direction = "🔽 DOWN"
-    target = latest_close - target_pts
-    stoploss = latest_close + sl_pts
-    option = f"{int(round(latest_close / 50.0) * 50)}PE"
+    if pred == 1:
+        direction = "🔼 UP"
+        target = latest_close + target_pts
+        stoploss = latest_close - sl_pts
+        option = f"{int(round(latest_close / 50.0) * 50)}CE"
+    else:
+        direction = "🔽 DOWN"
+        target = latest_close - target_pts
+        stoploss = latest_close + sl_pts
+        option = f"{int(round(latest_close / 50.0) * 50)}PE"
 
-now_ist = datetime.datetime.now(ZoneInfo("Asia/Kolkata"))
+    now_ist = datetime.datetime.now(ZoneInfo("Asia/Kolkata"))
 
-# 🖨️ Print Recommendation
-print("\n📈 --- Trade Recommendation ---")
-print(f"🕒 Candle Time: {latest_time_ist.strftime('%Y-%m-%d %H:%M:%S')} (IST)")
-print(f"💰 Last Close: {latest_close:.2f}")
-print(f"📡 Prediction: {direction}")
-print(f"🎯 Target: {target:.2f}")
-print(f"🛑 Stoploss: {stoploss:.2f}")
-print(f"💡 Trade Suggestion: {option} — Buy")
-print(f"🕘 Logged at: {now_ist.strftime('%Y-%m-%d %H:%M:%S')} (IST)")
+    print(f"🕒 Candle Time: {latest_time_ist.strftime('%Y-%m-%d %H:%M:%S')} (IST)")
+    print(f"💰 Last Close: {latest_close:.2f}")
+    print(f"📡 Prediction: {direction}")
+    print(f"🎯 Target: {target:.2f}")
+    print(f"🛑 Stoploss: {stoploss:.2f}")
+    print(f"💡 Suggestion: {option} — Buy")
+    print(f"🕘 Time: {now_ist.strftime('%Y-%m-%d %H:%M:%S')}")
 
-# 💬 WhatsApp message body
-whatsapp_message = f"""📈 --- Trade Recommendation ---
+    # Compose message
+    msg = f"""📈 --- {name} Trade Recommendation ---
 🕒 Candle Time: {latest_time_ist.strftime('%Y-%m-%d %H:%M:%S')} (IST)
 💰 Last Close: {latest_close:.2f}
 📡 Prediction: {direction}
 🎯 Target: {target:.2f}
 🛑 Stoploss: {stoploss:.2f}
 💡 Trade Suggestion: {option} — Buy
-🕘 Logged at: {now_ist.strftime('%Y-%m-%d %H:%M:%S')} (IST)
-"""
+🕘 Logged at: {now_ist.strftime('%Y-%m-%d %H:%M:%S')} (IST)"""
+    
+    return msg
 
-# ✅ Twilio credentials from environment variables (GitHub Secrets)
+
+# ✅ Twilio credentials from GitHub Actions Secrets
 account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
 auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
 from_whatsapp = 'whatsapp:+14155238886'
 
 # 📲 Recipients
 recipient_numbers = [
-     'whatsapp:+917731965666',
-        'whatsapp:+918520876451',
-        'whatsapp:+919032821222'
+    'whatsapp:+917731965666',
+    'whatsapp:+918520876451',
+    'whatsapp:+919032821222'
 ]
 
-# 🚀 Send WhatsApp messages
+# 🧠 Run predictions for all indices
+messages = []
+indices = {
+    "^NSEI": "NIFTY 50",
+    "^NSEBANK": "BANK NIFTY",
+    "^BSESN": "SENSEX"
+}
+
+for ticker, name in indices.items():
+    msg = predict_index(ticker, name)
+    if msg:
+        messages.append(msg)
+
+# 📨 Combine all predictions into one message
+combined_message = "\n\n".join(messages)
+
+# 🚀 Send single combined WhatsApp message to each recipient
 try:
     client = Client(account_sid, auth_token)
     for number in recipient_numbers:
         message = client.messages.create(
             from_=from_whatsapp,
-            body=whatsapp_message,
+            body=combined_message,
             to=number
         )
         print(f"✅ WhatsApp sent to {number} | SID: {message.sid}")
