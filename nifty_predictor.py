@@ -97,8 +97,8 @@ from_whatsapp = 'whatsapp:+14155238886'
 # 📲 Recipients
 recipient_numbers = [
     'whatsapp:+917731965666',
-    'whatsapp:+918520876451',
-    'whatsapp:+919032821222'
+    
+    'whatsapp:+918520876451'
 ]
 
 # 🧠 Run predictions for all indices
