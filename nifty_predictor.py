@@ -52,7 +52,7 @@ def predict_index(ticker, name):
     latest_features = scaler.transform(latest[features])
     pred = model.predict(latest_features)[0]
 
-    target_pts = 25
+    target_pts = 10
     sl_pts = 15
 
     if pred == 1:
