@@ -96,8 +96,8 @@ whatsapp_message = f"""📈 --- Trade Recommendation ---
 """
 
 # ✅ Twilio credentials from environment variables (GitHub Secrets)
-account_sid = os.environ.get("SK92a14d2f81ea57e68db53a2d0a75665a")
-auth_token = os.environ.get("vdXODGfLyxv6f53RY6qjKZYzfzUqmzgi")
+account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
 from_whatsapp = 'whatsapp:+14155238886'
 
 # 📲 Recipients
